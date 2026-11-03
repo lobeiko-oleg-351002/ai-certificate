@@ -1,0 +1,85 @@
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.column {
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 0.75rem;
+  min-height: 12rem;
+}
+
+.columnTitle {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.count {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.625rem 0.75rem;
+}
+
+.key {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.cardTitle {
+  margin: 0.125rem 0 0.25rem;
+  font-size: 0.95rem;
+}
+
+.description {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.empty {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+.banner {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin: 0 0 1rem;
+}
+
+@media (max-width: 720px) {
+  .board {
+    grid-template-columns: 1fr;
+  }
+}

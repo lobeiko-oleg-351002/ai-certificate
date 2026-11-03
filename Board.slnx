@@ -2,8 +2,10 @@
   <Folder Name="/src/">
     <Project Path="src/Board.Api/Board.Api.csproj" />
     <Project Path="src/Board.Contracts/Board.Contracts.csproj" />
+    <Project Path="src/Board.Mcp/Board.Mcp.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Board.Api.Tests/Board.Api.Tests.csproj" />
+    <Project Path="tests/Board.Mcp.Tests/Board.Mcp.Tests.csproj" />
   </Folder>
 </Solution>

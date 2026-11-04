@@ -6,7 +6,8 @@ namespace Board.Api.Cards;
 
 public sealed class CardService(BoardDbContext db, TimeProvider clock)
 {
-    private const int MaxAllocationAttempts = 3;
+    private const int MaxAllocationAttempts = 10;
+    private const int MaxUpsertAttempts = 10;
 
     public async Task<IReadOnlyList<CardDto>> ListAsync(CancellationToken ct)
     {
@@ -63,6 +64,38 @@ public sealed class CardService(BoardDbContext db, TimeProvider clock)
         CardKey.TryParse(key, out var number)
             ? number
             : throw new ArgumentException("Key must be validated before it reaches the service.", nameof(key));
+
+    public async Task<UpsertResult> UpsertAsync(string key, UpsertCardRequest request, CancellationToken ct)
+    {
+        var number = ParseExplicit(key);
+        for (var attempt = 1; ; attempt++)
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            var card = await db.Cards.FirstOrDefaultAsync(c => c.Key == key, ct);
+            var now = clock.GetUtcNow();
+            var created = card is null;
+            card ??= db.Cards.Add(new Card { Key = key, Number = number, Title = request.Title!, CreatedAt = now }).Entity;
+
+            card.Title = request.Title!;
+            card.Description = request.Description ?? "";
+            card.Status = request.Status!.Value;
+            card.Phase = request.Phase;
+            card.PendingGate = request.PendingGate;
+            card.UpdatedAt = now;
+
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+                return new UpsertResult(card.ToDto(), created);
+            }
+            catch (DbUpdateException) when (attempt < MaxUpsertAttempts)
+            {
+                // A concurrent writer won the key or the write lock; reload and apply as a replace.
+                db.ChangeTracker.Clear();
+            }
+        }
+    }
 
     public async Task<CardResult> PatchAsync(string key, CardPatch patch, CancellationToken ct)
     {

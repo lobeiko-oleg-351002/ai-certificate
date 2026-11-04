@@ -79,7 +79,9 @@ describe("Board", () => {
     expect(inProgress.getByText("BRD-2")).toBeInTheDocument();
     expect(inProgress.getByText("Title BRD-2")).toBeInTheDocument();
     expect(inProgress.getByText("Description BRD-2")).toBeInTheDocument();
-    expect(inProgress.getByText(/Status: InProgress \| Phase: implement \| Gate: plan/)).toBeInTheDocument();
+    expect(inProgress.getByText("Status: InProgress")).toBeInTheDocument();
+    expect(inProgress.getByText("implement")).toBeInTheDocument();
+    expect(inProgress.getByText("Gate: plan")).toBeInTheDocument();
     expect(within(columns[0]!).getByText("BRD-3")).toBeInTheDocument();
     expect(within(columns[2]!).getByText("BRD-1")).toBeInTheDocument();
   });
@@ -116,6 +118,26 @@ describe("Board", () => {
     await advance(POLL_INTERVAL_MS);
     expect(within(screen.getByRole("region", { name: "In Progress" })).getByText("BRD-1")).toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "To Do" })).queryByText("BRD-1")).toBeNull();
+  });
+
+  it("shows a gate set on a later poll and removes it when cleared, without a reload", async () => {
+    fetchMock.mockImplementation(
+      sequence(
+        json([make("BRD-1", "InProgress", { phase: "spec" })]),
+        json([make("BRD-1", "InProgress", { phase: "spec", pendingGate: "spec" })]),
+        json([make("BRD-1", "InProgress", { phase: "plan", pendingGate: null })]),
+      ),
+    );
+    renderBoard();
+    await advance(0);
+    expect(screen.queryByText(/^Gate:/)).toBeNull();
+
+    await advance(POLL_INTERVAL_MS);
+    expect(screen.getByText("Gate: spec")).toBeInTheDocument();
+
+    await advance(POLL_INTERVAL_MS);
+    expect(screen.queryByText(/^Gate:/)).toBeNull();
+    expect(screen.getByText("plan")).toBeInTheDocument();
   });
 
   it("keeps the last cards and shows a banner when a poll fails, then clears it on recovery", async () => {

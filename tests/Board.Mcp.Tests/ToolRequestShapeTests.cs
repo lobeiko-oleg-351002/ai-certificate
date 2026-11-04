@@ -107,46 +107,4 @@ public class ToolRequestShapeTests
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal("""{"title":"Title","key":"BRD-3","status":"InProgress"}""", request.Body);
     }
-
-    [Fact]
-    public async Task SyncCard_MissingCard_GetsThenPostsWithTheKey()
-    {
-        var handler = new FakeHandler(r => r.Method == HttpMethod.Get
-            ? FakeHandler.Json(HttpStatusCode.NotFound, "{}")
-            : FakeHandler.Json(HttpStatusCode.Created, Harness.CardJson));
-
-        var result = await Harness.For(handler).Write.SyncCard("BRD-7", "T", "ToDo", phase: "Phase 5", ct: default);
-
-        Assert.Equal([HttpMethod.Get, HttpMethod.Post], handler.Requests.Select(r => r.Method));
-        Assert.Equal("""{"title":"T","key":"BRD-7","status":"ToDo","phase":"Phase 5"}""", handler.Requests[1].Body);
-        Assert.Equal("created", JsonNode.Parse(Harness.TextOf(result))!["action"]!.GetValue<string>());
-    }
-
-    [Fact]
-    public async Task SyncCard_ExistingCard_GetsThenPatchesEveryField()
-    {
-        var handler = new FakeHandler(_ => FakeHandler.Json(HttpStatusCode.OK, Harness.CardJson));
-
-        var result = await Harness.For(handler).Write.SyncCard("BRD-7", "T", "Done", "D", "", default);
-
-        Assert.Equal([HttpMethod.Get, HttpMethod.Patch], handler.Requests.Select(r => r.Method));
-        Assert.Equal("""{"title":"T","description":"D","status":"Done","phase":null}""", handler.Requests[1].Body);
-        Assert.Equal("updated", JsonNode.Parse(Harness.TextOf(result))!["action"]!.GetValue<string>());
-    }
-
-    [Fact]
-    public async Task SyncCard_PostConflict_FallsBackToPatch()
-    {
-        var handler = new FakeHandler(r => r.Method.Method switch
-        {
-            "GET" => FakeHandler.Json(HttpStatusCode.NotFound, "{}"),
-            "POST" => FakeHandler.Json(HttpStatusCode.Conflict, "{}"),
-            _ => FakeHandler.Json(HttpStatusCode.OK, Harness.CardJson)
-        });
-
-        var result = await Harness.For(handler).Write.SyncCard("BRD-7", "T", "ToDo", ct: default);
-
-        Assert.Equal(["GET", "POST", "PATCH"], handler.Requests.Select(r => r.Method.Method));
-        Assert.Equal("updated", JsonNode.Parse(Harness.TextOf(result))!["action"]!.GetValue<string>());
-    }
 }

@@ -23,9 +23,21 @@ public sealed class BoardClient(HttpClient http, Func<string?> apiUrl)
     public Task<BoardResult<CardDto>> PatchAsync(string key, JsonObject body, CancellationToken ct) =>
         SendAsync<CardDto>(HttpMethod.Patch, CardPath(key), body, ct);
 
+    public async Task<BoardResult<UpsertedCard>> UpsertAsync(string key, UpsertCardRequest request, CancellationToken ct)
+    {
+        var status = 0;
+        var result = await SendAsync<CardDto>(HttpMethod.Put, CardPath(key), request, ct,
+            expectedStatuses: [200, 201], onSuccess: code => status = code);
+        return result.Error is null
+            ? BoardResult<UpsertedCard>.Ok(new UpsertedCard(result.Value!, status == 201))
+            : BoardResult<UpsertedCard>.Fail(result.Error);
+    }
+
     private static string CardPath(string key) => $"/api/cards/{Uri.EscapeDataString(key)}";
 
-    private async Task<BoardResult<T>> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken ct)
+    private async Task<BoardResult<T>> SendAsync<T>(
+        HttpMethod method, string path, object? body, CancellationToken ct,
+        int[]? expectedStatuses = null, Action<int>? onSuccess = null)
     {
         var write = method != HttpMethod.Get;
         var raw = apiUrl();
@@ -45,9 +57,17 @@ public sealed class BoardClient(HttpClient http, Func<string?> apiUrl)
             using var response = await http.SendAsync(request, ct);
             gotResponse = true;
             var text = await response.Content.ReadAsStringAsync(ct);
-            return response.IsSuccessStatusCode
-                ? ReadSuccess<T>(text, api, (int)response.StatusCode, write)
-                : ReadFailure<T>(text, api, response.StatusCode, write);
+            if (!response.IsSuccessStatusCode)
+                return ReadFailure<T>(text, api, response.StatusCode, write);
+
+            var code = (int)response.StatusCode;
+            if (expectedStatuses is not null && !expectedStatuses.Contains(code))
+                return Fail<T>(BoardErrorKind.BadResponse, $"The API answered an unexpected {code}.", api, code,
+                    Truncate(text), Uncertain(write));
+            var parsed = ReadSuccess<T>(text, api, code, write);
+            if (parsed.Error is null)
+                onSuccess?.Invoke(code);
+            return parsed;
         }
         catch (HttpRequestException ex) when (!gotResponse)
         {

@@ -7,11 +7,15 @@ export function CardItem({ card }: { card: Card }) {
       <p className={styles.key}>{card.key}</p>
       <h3 className={styles.cardTitle}>{card.title}</h3>
       {card.description ? <p className={styles.description}>{card.description}</p> : null}
-      <p className={styles.meta}>
-        Status: {card.status}
-        {card.phase ? ` | Phase: ${card.phase}` : ""}
-        {card.pendingGate ? ` | Gate: ${card.pendingGate}` : ""}
-      </p>
+      <div className={styles.meta}>
+        <span>Status: {card.status}</span>
+        {card.phase ? <span className={styles.phase}>{card.phase}</span> : null}
+      </div>
+      {card.pendingGate ? (
+        <p className={styles.gate} role="note" aria-label={`Pending gate: ${card.pendingGate}`}>
+          Gate: {card.pendingGate}
+        </p>
+      ) : null}
     </li>
   );
 }

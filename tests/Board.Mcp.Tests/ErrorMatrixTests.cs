@@ -213,30 +213,60 @@ public class ErrorMatrixTests
     }
 
     [Fact]
-    public async Task SyncCard_RetryFailureAfterConflict_NamesBothSteps()
+    public async Task SyncCard_ServerErrorOnThePut_IsUnknown()
     {
-        var handler = new FakeHandler(r => r.Method.Method switch
-        {
-            "GET" => FakeHandler.Json(HttpStatusCode.NotFound, "{}"),
-            "POST" => FakeHandler.Json(HttpStatusCode.Conflict, "{}"),
-            _ => FakeHandler.Json(HttpStatusCode.InternalServerError, """{"title":"boom"}""")
-        });
+        var handler = Harness.Always(HttpStatusCode.InternalServerError, """{"title":"boom"}""");
 
         var result = await Harness.For(handler).Write.SyncCard("BRD-1", "T", "ToDo", ct: default);
 
         var text = Harness.TextOf(result);
         Assert.True(result.IsError);
-        Assert.Contains("POST answered 409, then the PATCH retry failed", text);
+        Assert.Contains("[api_error] sync_card", text);
         Assert.Contains("applied: unknown", text);
+        Assert.Single(handler.Requests);
     }
 
     [Fact]
-    public async Task SyncCard_FailingLookup_ReportsNothingWasApplied()
+    public async Task SyncCard_Refused_ReportsNothingWasApplied()
     {
         var result = await Harness.For(Throwing(Refused())).Write.SyncCard("BRD-1", "T", "ToDo", ct: default);
 
         var text = Harness.TextOf(result);
         Assert.Contains("[unreachable] sync_card", text);
         Assert.Contains("applied: no", text);
+    }
+
+    [Fact]
+    public async Task SyncCard_Validation400_IsNotApplied()
+    {
+        var handler = Harness.Always(HttpStatusCode.BadRequest, """{"title":"One or more validation errors occurred.","errors":{"title":["Title is required."]}}""");
+
+        var text = Harness.TextOf(await Harness.For(handler).Write.SyncCard("BRD-1", "T", "ToDo", ct: default));
+
+        Assert.Contains("[validation] sync_card", text);
+        Assert.Contains("applied: no", text);
+    }
+
+    [Fact]
+    public async Task SyncCard_Timeout_IsUnknownAndPointsAtGetCard()
+    {
+        var handler = new FakeHandler(_ => throw new TaskCanceledException("timed out"));
+
+        var text = Harness.TextOf(await Harness.For(handler).Write.SyncCard("BRD-1", "T", "ToDo", ct: default));
+
+        Assert.Contains("[timeout] sync_card", text);
+        Assert.Contains("applied: unknown", text);
+    }
+
+    [Fact]
+    public async Task SyncCard_Unexpected2xx_IsABadResponseNeverSuccess()
+    {
+        var handler = Harness.Always(HttpStatusCode.Accepted, Harness.CardJson);
+
+        var result = await Harness.For(handler).Write.SyncCard("BRD-1", "T", "ToDo", ct: default);
+
+        Assert.True(result.IsError);
+        Assert.Contains("[bad_response] sync_card", Harness.TextOf(result));
+        Assert.Contains("applied: unknown", Harness.TextOf(result));
     }
 }

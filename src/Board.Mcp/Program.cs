@@ -8,7 +8,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
 
 builder.Services.AddSingleton(_ => new BoardClient(
-    new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
+    BoardHttp.Create(),
     () => Environment.GetEnvironmentVariable("BOARD_API_URL")));
 builder.Services.AddSingleton<CardSyncService>();
 builder.Services

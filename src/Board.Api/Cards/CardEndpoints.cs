@@ -27,6 +27,18 @@ public static class CardEndpoints
                 : Results.Created($"/api/cards/{result.Card.Key}", result.Card);
         });
 
+        group.MapPut("/{key}", async (string key, UpsertCardRequest request, CardService cards, CancellationToken ct) =>
+        {
+            var errors = UpsertCardValidator.Validate(key, request);
+            if (errors.Count > 0)
+                return Results.ValidationProblem(errors);
+
+            var result = await cards.UpsertAsync(key, request, ct);
+            return result.Created
+                ? Results.Created($"/api/cards/{result.Card.Key}", result.Card)
+                : Results.Ok(result.Card);
+        });
+
         group.MapPatch("/{key}", async (string key, JsonObject? body, CardService cards, CancellationToken ct) =>
         {
             var read = CardPatchReader.Read(body);

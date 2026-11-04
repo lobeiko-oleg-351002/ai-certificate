@@ -42,7 +42,7 @@ public class LiveApiTests
         var first = await tools.Write.SyncCard("BRD-3", "MCP server", "InProgress", phase: "Phase 5", ct: default);
         Assert.Contains("\"action\":\"created\"", Harness.TextOf(first));
 
-        var second = await tools.Write.SyncCard("BRD-3", "MCP server", "Done", phase: "", ct: default);
+        var second = await tools.Write.SyncCard("BRD-3", "MCP server", "Done", phase: "", pendingGate: "", ct: default);
         Assert.Contains("\"action\":\"updated\"", Harness.TextOf(second));
 
         var card = Harness.CardOf(await tools.Read.GetCard("BRD-3", default));

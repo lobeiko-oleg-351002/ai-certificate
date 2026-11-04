@@ -23,6 +23,9 @@ public static class TestJson
         return (await response.Content.ReadFromJsonAsync<CardDto>(Options))!;
     }
 
+    public static async Task<HttpResponseMessage> UpsertAsync(this HttpClient client, string key, object body) =>
+        await client.PutAsJsonAsync($"/api/cards/{key}", body, Options);
+
     public static async Task<HttpResponseMessage> PatchAsync(this HttpClient client, string key, string rawJson) =>
         await client.PatchAsync($"/api/cards/{key}", new StringContent(rawJson, Encoding.UTF8, "application/json"));
 

@@ -61,7 +61,7 @@ public sealed class CardWriteTools(BoardClient board, CardSyncService sync)
             : ToolResults.From("update_card", await board.PatchAsync(key, body, ct));
     }
 
-    [McpServerTool(Name = "sync_card"), Description("Idempotent upsert for catch-up: creates the card with this key if missing, otherwise updates it to the given values.")]
+    [McpServerTool(Name = "sync_card"), Description("Idempotent upsert for catch-up in one write: creates the card with this key if missing, otherwise replaces it with the given values. On an existing card an omitted description, phase or pendingGate is cleared.")]
     public async Task<CallToolResult> SyncCard(
         [Description("Card key, BRD-n.")] string key,
         [Description("Card title.")] string title,
